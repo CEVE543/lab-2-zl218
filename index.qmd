@@ -1,7 +1,7 @@
 ---
 title: "Lab 2: Julia Data Handling"
 subtitle: "DataFrames.jl, Plotting with CairoMakie, TX precipitation datasets, Basic exploratory data analysis"
-author: CEVE 543 Fall 2025
+author: Zijie (Ian) Liang
 date: "2025-09-05"
 type: "lab"
 module: 1
@@ -313,7 +313,7 @@ function plot_stations()
 	# Create map plot colored by years of data
 	fig = Figure(size = (800, 600))
 	ga = GeoAxis(fig[1, 1]; source = "+proj=latlong", dest = "+proj=merc",   # <1>
-		title = "Texas Atlas-14 Stations", xgridvisible = false, ygridvisible = false)
+		title = "Texas Atlas-14 Stations", xgridvisible = false, ygridvisible = false) 
 
 	# Add US states (white with black borders)
 	states = GeoMakie.naturalearth("admin_1_states_provinces_lakes", 110)  # <2>
@@ -348,17 +348,17 @@ plot_stations()
 
 ### Finding Stations Near a Target Location
 
-Let's say we want to study rainfall at a particular point. We'll use Rice University in Houston as our example:
+Let's say we want to study rainfall at a particular point. I use NASA Johnson Space Center in Houston as our example:
 
 ```{julia}
-target_location = "Rice University"  # <1>
-target_lon = -95.404970              # <2>
-target_lat = 29.718952               # <3>
+target_location = "NASA Johnson Space Center"  # <1>
+target_lon = -95.09333              # <2>
+target_lat = 29.55301               # <3>
 ```
 
 1. Descriptive name for our target location (change this for different places!)
-2. Rice University's longitude coordinate (negative means west of Greenwich)
-3. Rice University's latitude coordinate (positive means north of equator)
+2. NASA Johnson Space Center's longitude coordinate (negative means west of Greenwich)
+3. NASA Johnson Space Center's latitude coordinate (positive means north of equator)
 
 
 ### Calculating Distances to Weather Stations
@@ -498,105 +498,108 @@ Now we'll work with a GEV distribution to create return period plots and compare
 **Your task**: Experiment with different GEV parameters to see how well you can match the observed data from your closest station. You'll need to systematically test each parameter to answer the questions at the end. Start with these parameters, then modify them one at a time:
 
 ```{julia}
-# GEV parameters for Houston area (units: inches)
-# Try modifying these values to better fit your data!
-μ = 4.0    # Location parameter - shifts the distribution left/right
-σ = 1.3    # Scale parameter - controls spread (must be > 0)
-ξ = 0.15   # Shape parameter - controls tail behavior
+	# GEV parameters for NASA Johnson Space Center area (units: inches)
+	# Try modifying these values to better fit your data!
+	μ = 3.0    # Location parameter - shifts the distribution left/right
+	σ = 1.8    # Scale parameter - controls spread (must be > 0)
+	ξ = 0.2   # Shape parameter - controls tail behavior
 
-houston_gev = GeneralizedExtremeValue(μ, σ, ξ)  # <1>
+	NASACenter_gev = GeneralizedExtremeValue(μ, σ, ξ)  # <1>
 ```
 
-1. Create GEV distribution with the specified parameters
+	1. Create GEV distribution with the specified parameters
 
-### Return Period Plot
+	### Return Period Plot
 
 ```{julia}
-# Function to calculate return levels from GEV
-function gev_return_level(gev_dist, return_period)
-	μ, σ, ξ = params(gev_dist)  # <1>
-	if abs(ξ) < 1e-6  # Gumbel case
-		return μ - σ * log(-log(1 - 1 / return_period))  # <2>
-	else
-		return μ - (σ / ξ) * (1 - (-log(1 - 1 / return_period))^(-ξ))  # <3>
+	# Function to calculate return levels from GEV
+	function gev_return_level(gev_dist, return_period)
+		μ, σ, ξ = params(gev_dist)  # <1>
+		if abs(ξ) < 1e-6  # Gumbel case
+			return μ - σ * log(-log(1 - 1 / return_period))  # <2>
+		else
+			return μ - (σ / ξ) * (1 - (-log(1 - 1 / return_period))^(-ξ))  # <3>
+		end
 	end
-end
 
-# Create return period plot
-function plot_return_periods(gev_dist)
-	fig = Figure(size = (800, 400))
-	ax = Axis(fig[1, 1],
-		xlabel = "Return Period (years)",
-		ylabel = "Return Level (inches)",
-		title = "GEV Return Period Plot",
-		xscale = log10)  # <4>
+	# Create return period plot
+	function plot_return_periods(gev_dist)
+		fig = Figure(size = (800, 400))
+		ax = Axis(fig[1, 1],
+			xlabel = "Return Period (years)",
+			ylabel = "Return Level (inches)",
+			title = "GEV Return Period Plot",
+			xscale = log10)  # <4>
+			
 
-	# Plot curve and highlight standard return periods
-	T_smooth = 10 .^ range(log10(1.1), log10(250), length = 100)
-	levels_smooth = [gev_return_level(gev_dist, T) for T in T_smooth]
-	lines!(ax, T_smooth, levels_smooth, color = :blue, linewidth = 2, label = "GEV Model")
+		# Plot curve and highlight standard return periods
+		T_smooth = 10 .^ range(log10(1.1), log10(250), length = 100)
+		levels_smooth = [gev_return_level(gev_dist, T) for T in T_smooth]
+		lines!(ax, T_smooth, levels_smooth, color = :blue, linewidth = 2, label = "GEV Model")
 
-	return_periods = [5, 10, 25, 50, 100, 250]  # <5>
+		return_periods = [5, 10, 25, 50, 100, 250]  # <5>
 
-	ax.xticks = [5, 10, 25, 50, 100, 250]
-	return fig
-end
+		ax.xticks = [5, 10, 25, 50, 100, 250]
+		return fig
+	end
 
-plot_return_periods(houston_gev)
+	plot_return_periods(NASACenter_gev)
 ```
 
-1. Extract GEV parameters from distribution object
-2. Gumbel formula when $\xi \approx 0$
-3. General GEV return level formula
-4. Log scale for x-axis
-5. Standard return periods for flood analysis
+	1. Extract GEV parameters from distribution object
+	2. Gumbel formula when $\xi \approx 0$
+	3. General GEV return level formula
+	4. Log scale for x-axis
+	5. Standard return periods for flood analysis
 
-### Weibull Plotting Positions - Comparing Theory vs Reality
+	### Weibull Plotting Positions - Comparing Theory vs Reality
 
-Now let's see how well your chosen GEV parameters match the actual observed data! The red dots show the empirical return periods calculated from your station's data using Weibull plotting positions.
+	Now let's see how well your chosen GEV parameters match the actual observed data! The red dots show the empirical return periods calculated from your station's data using Weibull plotting positions.
 
-**What to look for as you experiment:**
-- Do the red dots follow the blue GEV curve? 
-- Are there systematic deviations at high or low return periods?
-- How does each parameter change affect the fit?
+	**What to look for as you experiment:**
+	- Do the red dots follow the blue GEV curve? 
+	- Are there systematic deviations at high or low return periods?
+	- How does each parameter change affect the fit?
 
-**Systematic experimentation approach:**
-1. First, try increasing $\mu$ by 1-2 inches, then decreasing it. Note the effect.
-2. Next, try increasing $\sigma$ by 0.5, then decreasing it. Note the effect.
-3. Finally, try changing $\xi$ to 0.0 (Gumbel), then to -0.1 (light tail), then 0.3 (heavy tail). Note the effect.
-4. Find your best combination!
+	**Systematic experimentation approach:**
+	1. First, try increasing $\mu$ by 1-2 inches, then decreasing it. Note the effect.
+	2. Next, try increasing $\sigma$ by 0.5, then decreasing it. Note the effect.
+	3. Finally, try changing $\xi$ to 0.0 (Gumbel), then to -0.1 (light tail), then 0.3 (heavy tail). Note the effect.
+	4. Find your best combination!
 
 ```{julia}
-# Weibull plotting positions
-function weibull_plotting_positions(data)
-	clean_data = sort(collect(skipmissing(data)))  # <1>
-	n = length(clean_data)
-	plotting_positions = [i / (n + 1) for i in 1:n]  # <2>
-	empirical_return_periods = [1 / (1 - p) for p in plotting_positions]  # <3>
-	return clean_data, empirical_return_periods
-end
+	# Weibull plotting positions
+	function weibull_plotting_positions(data)
+		clean_data = sort(collect(skipmissing(data)))  # <1>
+		n = length(clean_data)
+		plotting_positions = [i / (n + 1) for i in 1:n]  # <2>
+		empirical_return_periods = [1 / (1 - p) for p in plotting_positions]  # <3>
+		return clean_data, empirical_return_periods
+	end
 
-# Plot empirical vs theoretical
-function plot_empirical_vs_theoretical(station_data, gev_dist, station_info)
-	# Start with the basic return period plot
-	fig = plot_return_periods(gev_dist)  # <4>
-	ax = fig.content[1]  # Get the actual Axis object
+	# Plot empirical vs theoretical
+	function plot_empirical_vs_theoretical(station_data, gev_dist, station_info)
+		# Start with the basic return period plot
+		fig = plot_return_periods(gev_dist)  # <4>
+		ax = fig.content[1]  # Get the actual Axis object
 
-	# Update title to include station info
-	ax.title = "Empirical vs Theoretical Return Periods\n$(station_info.noaa_id): $(station_info.name)"  # <5>
+		# Update title to include station info
+		ax.title = "Empirical vs Theoretical Return Periods\n$(station_info.noaa_id): $(station_info.name)"  # <5>
 
-	# Add empirical data with Weibull positions
-	emp_levels, emp_periods = weibull_plotting_positions(station_data.rainfall)
-	scatter!(ax, emp_periods, emp_levels,
-		color = :red, markersize = 10,
-		label = "Observed Data (Weibull positions)")  # <6>
+		# Add empirical data with Weibull positions
+		emp_levels, emp_periods = weibull_plotting_positions(station_data.rainfall)
+		emp_levels_in = (emp_levels isa AbstractVector{<:Unitful.AbstractQuantity}) ?
+		ustrip.(uconvert.(u"inch", emp_levels)) : Float64.(emp_levels)
+		scatter!(ax, emp_periods, emp_levels_in,   
+    color = :red, markersize = 10,
+    label = "Observed Data (Weibull positions)")  # <6>
 
-	axislegend(ax, position = :rb)
+		axislegend(ax, position = :rb)
 
-	return fig
-end
+		return fig
+	end
 
-plot_empirical_vs_theoretical(closest_rainfall, houston_gev, closest_station)
+	plot_empirical_vs_theoretical(closest_rainfall, NASACenter_gev, closest_station)
 ```
 
 ## Analysis Questions
@@ -607,13 +610,13 @@ Explore the rainfall data to find one station where there *appears* to be a posi
 
 **Station with apparent positive trend:**
 
-*Write your answer here. Include the station name/ID and explain what you observe in the data that suggests an increasing trend.*
+*The closest station to NASA Johnson Space Center shows the trend in positive way. The station name is "CLEAR CK AT BAY AREA BLVD" and the station ID is 60-0011. The station is near the sea in the Houston area. Indicating the increase of rainfall patteren in Houston area. Although most of the years the rainfall stays between 5 - 10 inches, there were 5 years have the strong precipitaiton that between 10 inches within 1990 and 2020. The rain depth is increasing.*
 
 
 
 **Station with apparent negative trend:**
 
-*Write your answer here. Include the station name/ID and explain what you observe in the data that suggests a decreasing trend.*
+*The station "QUANAH 2 SW" shows the trend in negative way. The station ID is 41-7336. The station, which is located near the Quanah Municipal Airport, near the state line with Oklahoma, shows the trend in decrease in annual precipitation depth. Though there were some intense precipitaion events, the average precipitation data remain around 2 inches. The precipitation data in recent years are lowere than the data 40 years ago. The negative trend is not clear but the precipitation is reducing.*
 
 
 
@@ -624,25 +627,24 @@ Explore the rainfall data to find one station where there *appears* to be a posi
 *Record your starting parameters and the final parameters you chose after experimentation:*
 
 - Starting: $\mu = 4.0$, $\sigma = 1.3$, $\xi = 0.15$
-- Final: $\mu = \ldots$ $\sigma = \ldots$, $\xi = \ldots$
+- Final: $\mu = 3.0$ $\sigma = 1.8$, $\xi = 0.2$
 
 **Parameter Effects:**
 
 **What happened when you increased/decreased $\mu$ (location parameter)?**
 
-*Test values like $\mu = 2.0, 4.0, 6.0$. Describe how the entire GEV curve shifted and how this affected the fit to your red data points.*
-
+*With $\sigma$ and $\xi$ fixed, changing $\mu$ shifts the GEV curve vertically without altering its shape. When $\mu = 2.0$, the curve drops by about one inch (compared with my parameters), reducing overestimation and improving mid-range alignment but slightly underestimating at higher return periods. When $\mu = 4.0$, the curve rises by about one inch, which helps if red points lie above the $\mu = 3.0$ curve but otherwise creates overestimation, especially in the lower range. When $\mu = 6.0$, the curve moves up three inches, clearly overpredicting across all return periods. In practice, $\mu$ is best tuned to center the curve on the red points around 10–25 years, while $\sigma$ and $\xi$ handle slope and tail adjustments.*
 
 
 **What happened when you increased/decreased $\sigma$ (scale parameter)?**
 
-*Test values like $\sigma = 0.8, 1.3, 2.0$. Describe how the curve became steeper/flatter and how this affected the spread of return levels.*
+*With $\mu = 3.0$ and $\xi = 0.2$ fixed, adjusting $\sigma$ changes the steepness of the GEV curve and controls how quickly return levels rise with increasing return period. When $\sigma = 0.8$, the curve is flatter and compressed, meaning differences between low and high return periods are small, which can underestimate extremes relative to the red points. When $\sigma = 1.3$, the curve spreads out moderately, producing a reasonable rise in return levels that often balances mid- and high-period fit. When $\sigma = 2.0$, the curve becomes noticeably steeper, with return levels increasing rapidly at higher return periods, which can improve alignment if the red points at long return periods are high, but may overpredict in the lower range. Overall, increasing σ stretches the curve vertically and emphasizes differences across return periods, while decreasing $\sigma$ compresses it and diminishes the spread.*
 
 
 
 **What happened when you changed $\xi$ (shape parameter)?** 
 
-*Test $\xi = -0.1$ (light tail), $\xi = 0.0$ (Gumbel), $\xi = 0.15$, $\xi = 0.3$ (heavy tail). Focus on how the high return period end (right side) of the curve changed.*
+*With $\mu = 3.0$ and $\sigma = 1.8$ fixed, changing $\xi$ mainly affects the right tail of the GEV curve. When $\xi = - 0.1$, the curve has a light tail, so the high return period end flattens and predicted extremes grow slowly, often underestimating rare events. At $\xi = 0.0$ (the Gumbel case), the curve rises more steadily, producing a moderate tail that gives balanced growth in return levels. With $\xi = 0.15$, the curve bends upward more strongly, so higher return periods increase faster, matching data if observed extremes are large. When $\xi = 0.23$, the heavy tail exaggerates this effect, making the right side of the curve very steep and potentially overpredicting the most extreme return levels. In short, decreasing $\xi$ lightens the tail and suppresses extremes, while increasing $\xi$ makes the curve heavier and raises the high return period values.*
 
 
 
@@ -650,13 +652,13 @@ Explore the rainfall data to find one station where there *appears* to be a posi
 
 **How well does your best-fit GEV distribution represent the closest station's data?**
 
-*Do the red dots follow your blue curve? Where are the biggest deviations?*
+*The fitted GEV distribution provides a reasonable overall representation of the closest station’s rainfall extremes. In the mid-range return periods, roughly between 10 and 25 years, the red dots fall fairly close to the blue curve, showing that the model captures the central tendency of the data. This indicates that the chosen parameters align the distribution well with the bulk of observed extremes. At the lower end, around the 5-year return period, the red dots tend to fall slightly above the curve, suggesting the model underestimates smaller return levels. At the high end, beyond 50 years, the curve rises more steeply than the observed points, so the model may be overpredicting rare extremes compared to the available data. These deviations highlight that while the GEV gives a good baseline fit, especially in the middle range, adjustments in scale or shape could improve the representation of both the low and high tails.*
 
 
 
 **Additional observations:**
 
-*Optional: Add any other interesting patterns you notice in the return period analysis.*
+*One additional observation is that the spread of the red points becomes wider at higher return periods, reflecting greater uncertainty in estimating rare events from limited data. This makes the tail of the GEV curve particularly sensitive to parameter choices, and small changes in σ or $\xi$ can noticeably alter the fit in this region.*
 
 
 
